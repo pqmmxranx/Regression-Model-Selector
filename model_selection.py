@@ -1,3 +1,5 @@
+from typing import Union, Tuple
+
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -25,6 +27,9 @@ Evaluates the dataset into each regression model and determines
 the best model for the specific dataset based on its r squared
 value.
 
+Line 329 for CSV Filename
+Line 330 for Prediction values
+
 28/06/2025
 DD/MM/YYYY
 """
@@ -34,6 +39,10 @@ TEST_SIZE = 0.2
 RANDOM_STATE = 0
 POLY_DEGREE = 4
 N_ESTIMATORS = 10
+
+
+def divider() -> None:
+    print("*" * 80)
 
 
 def tt_split(
@@ -67,25 +76,31 @@ def print_details(
     :param ytest: Actual values of the test set
     """
     np.set_printoptions(precision=2)
-    ypred_reshape = ypred.reshape(len(ypred), 1)
-    ytest_reshape = ytest.reshape(len(ytest), 1)
+    y_reshaped = [i.reshape(len(i), 1) for i in (ypred, ytest)]
 
-    print(np.concatenate((ypred_reshape, ytest_reshape), 1))
+    print(np.concatenate((y_reshaped[0], y_reshaped[1]), 1))
     print(f"\t{r2_score(ytest, ypred)}")
 
 
 def multiple_linear_regression(
         X: np.ndarray,
-        y: np.ndarray
-    ) -> float:
+        y: np.ndarray,
+        predict_values=None
+    ) -> Union[float, Tuple[float, float], Tuple[float, str]]:
     """
     Applies the Multiple Linear Regression method from scikit-learn
     and evaluates its performance on the specific dataset.
 
     :param X: Independent variables
     :param y: Dependent variables
-    :return: Coefficient of determination (r squared value)
-        of the specific regression model
+    :param predict_values: X values to be predicted by the model.
+        Must be valid or else function will error.
+    :return: If `predict_values` is None, function will only return
+        Coefficient of determination (R squared value) of the
+        specific regression model. If `predict_values` is not None and
+        is valid, it will return R squared value and predicted value.
+        If `predict_values` is not None and is invalid, it will return
+        R squared value and string "Invalid prediction values".
     """
     Xtrain, Xtest, ytrain, ytest = tt_split(X, y)
 
@@ -95,21 +110,40 @@ def multiple_linear_regression(
     ypred = multiple_linear_regressor.predict(Xtest)
     print("multiple_linear_regression")
     print_details(ypred, ytest)
-    return r2_score(ytest, ypred)
+
+    r2 = r2_score(ytest, ypred)
+
+    if predict_values:
+        try:
+            return (r2,
+                    multiple_linear_regressor.predict(
+                        [predict_values])[0])
+        except Exception as e:
+            print(f"Invalid prediction values. {e}")
+            return r2, "Invalid prediction values"
+
+    return r2
 
 
 def polynomial_regression(
         X: np.ndarray,
-        y: np.ndarray
-    ) -> float:
+        y: np.ndarray,
+        predict_values=None
+    ) -> Union[float, Tuple[float, float], Tuple[float, str]]:
     """
     Applies the Polynomial Regression method from scikit-learn and
     evaluates its performance on the specific dataset.
 
     :param X: Independent variables
     :param y: Dependent variables
-    :return: Coefficient of determination (r squared value)
-        of the specific regression model
+    :param predict_values: X values to be predicted by the model.
+        Must be valid or else function will error.
+    :return: If `predict_values` is None, function will only return
+        Coefficient of determination (R squared value) of the
+        specific regression model. If `predict_values` is not None and
+        is valid, it will return R squared value and predicted value.
+        If `predict_values` is not None and is invalid, it will return
+        R squared value and string "Invalid prediction values".
     """
     Xtrain, Xtest, ytrain, ytest = tt_split(X, y)
 
@@ -123,24 +157,45 @@ def polynomial_regression(
     ypred = polynomial_regressor.predict(poly_reg.transform(Xtest))
     print("polynomial_regression")
     print_details(ypred, ytest)
-    return r2_score(ytest, ypred)
+
+    r2 = r2_score(ytest, ypred)
+
+    if predict_values:
+        try:
+            transformed_predict = poly_reg.fit_transform(
+                [predict_values])
+            return (r2,
+                    polynomial_regressor.predict(
+                        transformed_predict)[0])
+        except Exception as e:
+            print(f"Invalid prediction values. {e}")
+            return r2, "Invalid prediction values"
+
+    return r2
 
 
 def support_vector_regression(
         X: np.ndarray,
         y: np.ndarray,
+        predict_values=None,
         kernel: str = 'rbf'
-    ) -> float:
+    ) -> Union[float, Tuple[float, float], Tuple[float, str]]:
     """
     Applies the Support Vector Regression method from scikit-learn and
     evaluates its performance on the specific dataset.
 
-    :param kernel: SVR Kernel to be used from `rbf` (default),
-        `linear`, `poly`, and `sigmoid` (rarely used).
     :param X: Independent variables
     :param y: Dependent variables
-    :return: Coefficient of determination (r squared value)
-        of the specific regression model
+    :param predict_values: X values to be predicted by the model.
+        Must be valid or else function will error.
+    :param kernel: SVR Kernel to be used from `rbf` (default),
+        `linear`, `poly`, and `sigmoid` (rarely used).
+    :return: If `predict_values` is None, function will only return
+        Coefficient of determination (R squared value) of the
+        specific regression model. If `predict_values` is not None and
+        is valid, it will return R squared value and predicted value.
+        If `predict_values` is not None and is invalid, it will return
+        R squared value and string "Invalid prediction values".
     """
     y = y.reshape(len(y), 1)
     Xtrain, Xtest, ytrain, ytest = tt_split(X, y)
@@ -157,23 +212,47 @@ def support_vector_regression(
 
     pred_scale = support_vector_regressor.predict(scX.transform(Xtest))
     ypred = scy.inverse_transform(pred_scale.reshape(-1, 1))
+    print(ypred)
     print(f"support_vector_regression {kernel}")
     print_details(ypred, ytest)
-    return r2_score(ytest, ypred)
+
+    r2 = r2_score(ytest, ypred)
+
+    if predict_values:
+        try:
+            transformed_predict = scX.transform([predict_values])
+            predict_scale = support_vector_regressor.predict(
+                transformed_predict)
+            predict_scale_reshaped = predict_scale.reshape(-1, 1)
+            return (r2,
+                    scy.inverse_transform(
+                        predict_scale_reshaped)[0][0])
+        except Exception as e:
+            print(f"Invalid prediction values. {e}")
+            return r2, "Invalid prediction values"
+
+    return r2
 
 
 def decision_tree_regression(
         X: np.ndarray,
-        y: np.ndarray
-    ) -> float:
+        y: np.ndarray,
+        predict_values=None
+    ) -> Union[float, Tuple[float, float], Tuple[float, str]]:
     """
     Applies the Decision Tree Regression method from scikit-learn and
     evaluates its performance on the specific dataset.
 
     :param X: Independent variables
     :param y: Dependent variables
-    :return: Coefficient of determination (r squared value)
-        of the specific regression model
+    :param predict_values: X values to be predicted by the model.
+        Must be valid or else function will error.
+    :return: If `predict_values` is None, function will only return
+        Coefficient of determination (R squared value) of the
+        specific regression model. If `predict_values` is not None and
+        is valid, it will return R squared value and predicted value.
+        If `predict_values` is not None and is invalid, it will return
+        R squared value and string "Invalid prediction values".
     """
     Xtrain, Xtest, ytrain, ytest = tt_split(X, y)
 
@@ -185,21 +264,40 @@ def decision_tree_regression(
     ypred = decision_tree_regressor.predict(Xtest)
     print("decision_tree_regression")
     print_details(ypred, ytest)
-    return r2_score(ytest, ypred)
+
+    r2 = r2_score(ytest, ypred)
+
+    if predict_values:
+        try:
+            return (r2,
+                    decision_tree_regressor.predict(
+                        [predict_values])[0])
+        except Exception as e:
+            print(f"Invalid prediction values. {e}")
+            return r2, "Invalid prediction values"
+
+    return r2
 
 
 def random_forest_regression(
         X: np.ndarray,
-        y: np.ndarray
-    ) -> float:
+        y: np.ndarray,
+        predict_values=None
+    ) -> Union[float, Tuple[float, float], Tuple[float, str]]:
     """
     Applies the Random Forest Regression method from scikit-learn and
     evaluates its performance on the specific dataset.
 
     :param X: Independent variables
     :param y: Dependent variables
-    :return: Coefficient of determination (r squared value)
-        of the specific regression model
+    :param predict_values: X values to be predicted by the model.
+        Must be valid or else function will error.
+    :return: If `predict_values` is None, function will only return
+        Coefficient of determination (R squared value) of the
+        specific regression model. If `predict_values` is not None and
+        is valid, it will return R squared value and predicted value.
+        If `predict_values` is not None and is invalid, it will return
+        R squared value and string "Invalid prediction values".
     """
     Xtrain, Xtest, ytrain, ytest = tt_split(X, y)
 
@@ -212,14 +310,32 @@ def random_forest_regression(
     ypred = random_forest_regressor.predict(Xtest)
     print("random_forest_regression")
     print_details(ypred, ytest)
-    return r2_score(ytest, ypred)
+
+    r2 = r2_score(ytest, ypred)
+
+    if predict_values:
+        try:
+            return (r2,
+                    random_forest_regressor.predict(
+                        [predict_values])[0])
+        except Exception as e:
+            print(f"Invalid prediction values. {e}")
+            return r2, "Invalid prediction values"
+
+    return r2
 
 
 def main():
     csv_file = ""
+    prediction_values = [14.96,41.76,1024.07,73.17, 23]
     """ 
     Change `csv_file` to a specific file name for automatic execution.
     Default value is None or "".
+    
+    Change `prediction_values` into an array for predictions. Must be
+    valid arrays catered for the dataset or else it will cause an error.
+    
+    For testing: 14.96,41.76,1024.07,73.17
     """
 
     if not csv_file:
@@ -263,39 +379,61 @@ def main():
     """ Calling functions for each regression model """
     results_list = {
         "Multiple Linear":
-            multiple_linear_regression(X, y),
+            multiple_linear_regression(X, y, prediction_values),
         "Polynomial":
-            polynomial_regression(X, y),
+            polynomial_regression(X, y, prediction_values),
         "Decision Tree":
-            decision_tree_regression(X, y),
+            decision_tree_regression(X, y, prediction_values),
         "Random Forest":
-            random_forest_regression(X, y),
+            random_forest_regression(X, y, prediction_values),
         "Support Vector RBF":
-            support_vector_regression(X, y, kernel='rbf'),
+            support_vector_regression(X, y, prediction_values,
+                                      kernel='rbf'),
         "Support Vector Linear":
-            support_vector_regression(X, y, kernel='linear'),
+            support_vector_regression(X, y, prediction_values,
+                                      kernel='linear'),
         "Support Vector Poly":
-            support_vector_regression(X, y, kernel='poly'),
+            support_vector_regression(X, y, prediction_values,
+                                      kernel='poly'),
     }
 
+    divider()
 
-    print("*" * 80)
-
-    for key, value in results_list.items():
-        print(f"{f'{key} Regression'}: {value}")
-
-    """ 
-    Get best result or highest r squared value 
-    from `results_list` 
-    """
     values_list = [value for value in results_list.values()]
-    highest = [(key, value) for key, value in results_list.items() \
-               if value == max(values_list)][0]
 
-    print("*" * 80)
+    if not prediction_values:
+        for key, value in results_list.items():
+            print(f"{f'{key} Regression'}:")
+            print(f"\tR squared value: {value}")
 
-    print(f"Use {highest[0]} Regression with an R squared value "
-          f"of {highest[1]}")
+        """ 
+        Get best result or highest r squared value 
+        from `results_list` 
+        """
+        highest = [(key, value) for key, value in results_list.items() \
+                   if value == max(values_list)][0]
+
+        divider()
+
+        print(f"Use {highest[0]} Regression with an R squared value "
+              f"of {highest[1]}")
+    else:
+        for key, value in results_list.items():
+            print(f"{f'{key} Regression'}:")
+            print(f"\tR squared value: {value[0]}")
+            print(f"\tPrediction: {value[1]}")
+
+        """ 
+        Get best result or highest r squared value and prediction 
+        from `results_list` 
+        """
+        highest = [(key, value) for key, value in results_list.items() \
+                   if value[0] == max(values_list)[0]][0]
+
+        divider()
+
+        print(f"Use {highest[0]} Regression with an R squared value "
+              f"of {highest[1][0]} and prediction of {highest[1][1]}")
 
 
 if __name__ == '__main__':
