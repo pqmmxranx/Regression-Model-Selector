@@ -1,6 +1,6 @@
 from typing import Union, Tuple
-
 import numpy as np
+import matplotlib.pyplot as plt
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -27,22 +27,25 @@ Evaluates the dataset into each regression model and determines
 the best model for the specific dataset based on its r squared
 value.
 
-Line 329 for CSV Filename
-Line 330 for Prediction values
-
 28/06/2025
 DD/MM/YYYY
+
+Go to Line 355 to 357
 """
 
 """ Customizable Constants """
 TEST_SIZE = 0.2
 RANDOM_STATE = 0
-POLY_DEGREE = 4
+POLY_DEGREE = 6
 N_ESTIMATORS = 10
 
 
 def divider() -> None:
     print("*" * 80)
+
+
+def plot_line() -> None:
+    pass
 
 
 def tt_split(
@@ -55,7 +58,9 @@ def tt_split(
 
     :param X: Independent variables
     :param y: Dependent variables
-    :return: `X_train`, `X_test`, `y_train`, `y_test`
+    :return: The training and test sets for the independent and
+        dependent variables. Training: `X_train`, `y_train`.
+        Test: `X_test`, `y_test`.
     """
     return train_test_split(
         X, y,
@@ -113,6 +118,9 @@ def multiple_linear_regression(
 
     r2 = r2_score(ytest, ypred)
 
+    if can_be_plotted and plot_list["Multiple Linear"]:
+        plt.plot(X, multiple_linear_regressor.predict(X), color="blue")
+
     if predict_values:
         try:
             return (r2,
@@ -159,6 +167,10 @@ def polynomial_regression(
     print_details(ypred, ytest)
 
     r2 = r2_score(ytest, ypred)
+
+    if can_be_plotted and plot_list["Polynomial"]:
+        Xplot = poly_reg.fit_transform(X)
+        plt.plot(X, polynomial_regressor.predict(Xplot), color="purple")
 
     if predict_values:
         try:
@@ -212,7 +224,6 @@ def support_vector_regression(
 
     pred_scale = support_vector_regressor.predict(scX.transform(Xtest))
     ypred = scy.inverse_transform(pred_scale.reshape(-1, 1))
-    print(ypred)
     print(f"support_vector_regression {kernel}")
     print_details(ypred, ytest)
 
@@ -267,6 +278,12 @@ def decision_tree_regression(
 
     r2 = r2_score(ytest, ypred)
 
+    if can_be_plotted and plot_list["Decision Tree"]:
+        Xgrid = np.arange(min(X)[0], max(X)[0], 0.1)
+        Xgrid = Xgrid.reshape((len(Xgrid), 1))
+        X_grid_pred = decision_tree_regressor.predict(Xgrid)
+        plt.plot(Xgrid, X_grid_pred, color='orange')
+
     if predict_values:
         try:
             return (r2,
@@ -313,6 +330,12 @@ def random_forest_regression(
 
     r2 = r2_score(ytest, ypred)
 
+    if can_be_plotted and plot_list["Random Forest"]:
+        Xgrid = np.arange(min(X)[0], max(X)[0], 0.1)
+        Xgrid = Xgrid.reshape((len(Xgrid), 1))
+        Xgrid_pred = random_forest_regressor.predict(Xgrid)
+        plt.plot(Xgrid, Xgrid_pred, color='green')
+
     if predict_values:
         try:
             return (r2,
@@ -326,17 +349,30 @@ def random_forest_regression(
 
 
 def main():
-    csv_file = ""
-    prediction_values = [14.96,41.76,1024.07,73.17, 23]
+    global can_be_plotted
+    global plot_list
+
+    csv_file = "stock_data"
+    prediction_values = [12000]     # Example
+    plot_list = {
+        "Multiple Linear": True,
+        "Polynomial": True,
+        "Decision Tree": True,
+        "Random Forest": True,
+    }
     """ 
     Change `csv_file` to a specific file name for automatic execution.
     Default value is None or "".
     
     Change `prediction_values` into an array for predictions. Must be
     valid arrays catered for the dataset or else it will cause an error.
-    
     For testing: 14.96,41.76,1024.07,73.17
+    
+    Change `plot_list` values if you want to graph the specific
+    regression model. `True` if yes, `False` if no.
     """
+
+    can_be_plotted = False
 
     if not csv_file:
         while True:
@@ -375,6 +411,9 @@ def main():
     y = dataset.iloc[
         :, -1           # DEPENDENT VARIABLE
     ].values
+
+    if X.shape[0] == y.shape[0]:
+        can_be_plotted = True
 
     """ Calling functions for each regression model """
     results_list = {
@@ -434,6 +473,16 @@ def main():
 
         print(f"Use {highest[0]} Regression with an R squared value "
               f"of {highest[1][0]} and prediction of {highest[1][1]}")
+
+    if any(plot_list.values()):
+        try:
+            """ Plot samples in graph with matplotlib.pyplot """
+            plt.scatter(X, y, color="red")
+            plt.show()
+        except ValueError:
+            """ if X.shape != y.shape """
+            print("Cannot be graphed. X and y should have the same "
+                  "number of columns.")
 
 
 if __name__ == '__main__':
