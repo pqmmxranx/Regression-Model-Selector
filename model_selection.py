@@ -1,4 +1,3 @@
-from typing import Union, Tuple
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -10,6 +9,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.svm import SVR
 from sklearn.metrics import r2_score
+from typing import Union, Tuple
 
 """
 Machine Learning Regression Model Selector
@@ -36,16 +36,12 @@ Go to Line 355 to 357
 """ Customizable Constants """
 TEST_SIZE = 0.2
 RANDOM_STATE = 0
-POLY_DEGREE = 6
+POLY_DEGREE = 4
 N_ESTIMATORS = 10
 
 
 def divider() -> None:
     print("*" * 80)
-
-
-def plot_line() -> None:
-    pass
 
 
 def tt_split(
@@ -229,6 +225,10 @@ def support_vector_regression(
 
     r2 = r2_score(ytest, ypred)
 
+    for kernel_t in ("RBF", "Linear", "Poly"):
+        if can_be_plotted and plot_list[f"Support Vector {kernel_t}"]:
+            pass
+
     if predict_values:
         try:
             transformed_predict = scX.transform([predict_values])
@@ -355,10 +355,13 @@ def main():
     csv_file = "stock_data"
     prediction_values = [12000]     # Example
     plot_list = {
-        "Multiple Linear": True,
-        "Polynomial": True,
-        "Decision Tree": True,
-        "Random Forest": True,
+        "Multiple Linear": False,
+        "Polynomial": False,
+        "Decision Tree": False,
+        "Random Forest": False,
+        "Support Vector RBF": False,        # DOESNT WORK
+        "Support Vector Linear": False,     # DOESNT WORK
+        "Support Vector Poly": True,        # DOESNT WORK
     }
     """ 
     Change `csv_file` to a specific file name for automatic execution.
